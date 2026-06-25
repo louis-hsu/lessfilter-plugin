@@ -57,13 +57,19 @@ derives `<fext>` from the file name, then tries:
 | 1 | `<fcat>-<ftype>` | `image-jpeg`, `application-pdf` | most specific |
 | 2 | `<ftype>` | `jpeg`, `pdf`, `json` | usually sufficient |
 | 3 | `<fext>` | `csv`, `md` | mime type is generic (`text/plain`) |
+| 4 | `<fcat>` | `image`, `audio`, `video` | one handler for a whole category |
 
-This solves the two common cases cleanly:
+This solves the three common cases cleanly:
 
 - **Binary / well-typed files** (jpg, png, pdf, json) report a meaningful mime
   subtype, so `<ftype>` alone selects the handler.
 - **Generic text files** (csv, md, tsv) all report `text/plain`, so the
   **extension** `<fext>` selects the handler.
+- **A whole category handled identically** (e.g. preview any image with `chafa`):
+  a single handler named `image` (the `<fcat>` catch-all) covers `image/jpeg`,
+  `image/png`, `image/gif`, ... — no need for separate `jpeg`/`png`/`gif`
+  scripts. Because it is the least specific candidate, a more specific `<ftype>`
+  or `<fext>` handler still wins when present.
 
 A handler that exists but exits nonzero (declines) lets the next candidate name,
 then the next directory, then lesspipe's built-ins take over.

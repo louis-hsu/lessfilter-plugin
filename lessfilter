@@ -13,6 +13,7 @@
 #   <fcat>-<ftype>   e.g. image-jpeg, application-pdf   (most specific)
 #   <ftype>          e.g. jpeg, pdf, json               (usually sufficient)
 #   <fext>           e.g. csv, md                       (when mime is generic)
+#   <fcat>           e.g. image, audio, video           (category catch-all)
 #
 # Each handler receives:
 #   $1               path to the file
@@ -74,6 +75,8 @@ _names=()
 [[ -n "$LESSPIPE_FCAT" && -n "$LESSPIPE_FTYPE" ]] && _names+=("${LESSPIPE_FCAT}-${LESSPIPE_FTYPE}")
 [[ -n "$LESSPIPE_FTYPE" ]] && _names+=("$LESSPIPE_FTYPE")
 [[ -n "$LESSPIPE_FEXT" ]] && _names+=("$LESSPIPE_FEXT")
+# category catch-all: one "image"/"audio"/... handler covers every subtype
+[[ -n "$LESSPIPE_FCAT" ]] && _names+=("$LESSPIPE_FCAT")
 
 for _dir in "${_handler_dirs[@]}"; do
     [[ -d "$_dir" ]] || continue
