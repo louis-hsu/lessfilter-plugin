@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Example handler: pretty-print CSV as an aligned, syntax-highlighted table.
+#
+# Matched by extension (LESSPIPE_FEXT=csv) because CSV files report
+# a generic mime type of text/plain.
+#
+# Requires: qsv (https://github.com/dathere/qsv), bat
+#
+# Install:
+#   mkdir -p ~/.config/lesspipe/handlers.d
+#   cp csv ~/.config/lesspipe/handlers.d/csv
+#   chmod +x ~/.config/lesspipe/handlers.d/csv
+
+command -v qsv >/dev/null 2>&1 || exit 1   # not handled; fall through
+command -v bat >/dev/null 2>&1 || exit 1
+
+# Force color when less can render it; bat strips color into a pipe otherwise.
+[[ "$LESSPIPE_COLOR" == always ]] && batcolor=always || batcolor=never
+qsv table "$1" | bat -l csv --color="$batcolor" --paging=never
+exit 0

@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# lessfilter - plugin dispatcher for lesspipe.sh
+#
+# lesspipe.sh calls this script (if found in PATH) before its built-in handlers.
+# Picks a single handler by MIME type / extension - no directory scanning.
+#
+# Handler dirs searched in order (first existing match wins):
+#   ~/.config/lesspipe/handlers.d   user-local
+#   $LESSPIPE_HANDLERS_DIR          single dir env override (optional)
+#   /etc/lesspipe/handlers.d        system-wide
+#
+# Within each dir, a handler is looked up by name, most specific first:
+#   <fcat>-<ftype>   e.g. image-jpeg, application-pdf   (most specific)
+#   <ftype>          e.g. jpeg, pdf, json               (usually sufficient)
+#   <fext>           e.g. csv, md                       (when mime is generic)
+#
+# Each handler receives:
+#   $1               path to the file
+#
+# Env vars exported to handlers:
+#   LESSPIPE_FCAT    mime category  (e.g. text, application, image)
+#   LESSPIPE_FTYPE   mime subtype   (e.g. plain, pdf, json)
+#   LESSPIPE_FEXT    file extension (e.g. csv, md, sh)
+#   LESSPIPE_COLOR   "always" if less can render ANSI (got -R/-r), else "auto"
+#
+# Handler contract:
+#   exit 0   = handled (output already written to stdout)
+#   non-zero = not handled, fall through to lesspipe built-ins
+#
+# Handlers must be executable (chmod +x); non-executable matches are skipped.
+# stderr from the handler is merged into stdout.
+#
+# Note: color-producing tools (bat, jq, ...) strip color when their output is
+# not a terminal - which is always the case here, since output is piped into
+# less. Handlers must FORCE color, gated on LESSPIPE_COLOR=always, and less must
+# be told to pass ANSI through (-R, e.g. LESS=-R).
+
+[[ -z "$1" || "$1" == "-" ]] && exit 1
+
+# Decide whether less will render ANSI, from the same signal lesspipe uses:
+# the -R/-r (raw-control-chars) option in $LESS. Exported so handlers can force
+# color only when it will actually be displayed.
+LESSPIPE_COLOR=auto
+for _opt in $LESS; do
+    case "$_opt" in
+        --raw-control-chars|--RAW-CONTROL-CHARS) LESSPIPE_COLOR=always ;;
+        --*) ;;
+        -*[rR]*) LESSPIPE_COLOR=always ;;
+    esac
+done
+export LESSPIPE_COLOR
+
+_mime=$(file -L -s -b --mime-type "$1" 2>/dev/null)
+export LESSPIPE_FCAT="${_mime%%/*}"
+export LESSPIPE_FTYPE="${_mime#*/}"
+
+_fname="${1##*/}"
+case "$_fname" in
+    .*.*) _ext="${_fname##*.}" ;;
+    .*)   _ext="${_fname#.}" ;;
+    *.*)  _ext="${_fname##*.}" ;;
+    *)    _ext="" ;;
+esac
+export LESSPIPE_FEXT="${_ext}"
+
+_handler_dirs=(
+    "${HOME}/.config/lesspipe/handlers.d"
+    ${LESSPIPE_HANDLERS_DIR:+"$LESSPIPE_HANDLERS_DIR"}
+    "/etc/lesspipe/handlers.d"
+)
+
+# candidate handler names, most specific first; skip empty pieces
+_names=()
+[[ -n "$LESSPIPE_FCAT" && -n "$LESSPIPE_FTYPE" ]] && _names+=("${LESSPIPE_FCAT}-${LESSPIPE_FTYPE}")
+[[ -n "$LESSPIPE_FTYPE" ]] && _names+=("$LESSPIPE_FTYPE")
+[[ -n "$LESSPIPE_FEXT" ]] && _names+=("$LESSPIPE_FEXT")
+
+for _dir in "${_handler_dirs[@]}"; do
+    [[ -d "$_dir" ]] || continue
+    for _name in "${_names[@]}"; do
+        _handler="$_dir/$_name"
+        [[ -f "$_handler" && -x "$_handler" ]] || continue
+        "$_handler" "$1" 2>&1 && exit 0
+    done
+done
+
+exit 1

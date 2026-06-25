@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Example handler: pretty-print and syntax-highlight JSON.
+#
+# Matched by mime subtype (LESSPIPE_FTYPE=json) since JSON files report
+# application/json - the extension is not needed here.
+#
+# Requires: jq
+#
+# Install:
+#   mkdir -p ~/.config/lesspipe/handlers.d
+#   cp json ~/.config/lesspipe/handlers.d/json
+#   chmod +x ~/.config/lesspipe/handlers.d/json
+
+command -v jq >/dev/null 2>&1 || exit 1   # not handled; fall through
+
+# Force color when less can render it; jq strips color into a pipe otherwise.
+[[ "$LESSPIPE_COLOR" == always ]] && jqcolor=-C || jqcolor=-M
+jq "$jqcolor" . "$1"
+exit 0
