@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Example handler: render Excel / OpenDocument spreadsheets directly with xleak.
+#
+# Matched by extension (LESSPIPE_FEXT). Excel mime subtypes are long, vary per
+# format, and xlsx can even report application/zip - so the extension is the
+# stable key. Symlink each extension to this one script:
+#
+#   cp _excel ~/.config/lesspipe/handlers.d/_excel
+#   cd ~/.config/lesspipe/handlers.d && chmod +x _excel
+#   ln -s _excel xlsx
+#   ln -s _excel xls
+#   ln -s _excel xlsm
+#   ln -s _excel ods
+#
+# The leading underscore keeps _excel from being matched as a type/ext itself.
+#
+# Requires: xleak (https://github.com/, "Expose Excel files in your terminal")
+
+command -v xleak >/dev/null 2>&1 || exit 1   # not handled; fall through
+
+# -n 0 = all rows (default caps at 50), so the whole sheet is scrollable in less.
+xleak -n 0 "$1"
+exit 0

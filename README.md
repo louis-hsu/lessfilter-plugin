@@ -159,7 +159,29 @@ qsv table "$1" | bat -l csv --color="$batcolor" --paging=never
 exit 0
 ```
 
-Ready-to-copy versions of both live in `handlers.d/examples/`.
+### Example: Excel / spreadsheets (one script, several extensions)
+
+Excel mime subtypes are long, differ per format, and `.xlsx` can even report
+`application/zip` - so match by **extension**. Several extensions share one
+renderer via symlinks, named with a leading `_` so the script itself is never
+matched directly:
+
+`~/.config/lesspipe/handlers.d/_excel` (with `xlsx`, `xls`, `xlsm`, `ods`
+symlinked to it)
+
+```bash
+#!/usr/bin/env bash
+command -v xleak >/dev/null 2>&1 || exit 1   # decline if xleak missing
+xleak -n 0 "$1"                              # -n 0 = all rows
+exit 0
+```
+
+```bash
+cd ~/.config/lesspipe/handlers.d
+ln -s _excel xlsx && ln -s _excel xls && ln -s _excel xlsm && ln -s _excel ods
+```
+
+Ready-to-copy versions of all of these live in `handlers.d/examples/`.
 
 ## Installing a handler
 
